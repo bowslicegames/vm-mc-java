@@ -13,74 +13,71 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo (full)
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        persist-credentials: true
+      - name: Checkout repo (full)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
 
-    - name: Install build tools
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y --no-install-recommends \
-          debootstrap qemu-utils qemu-system-x86 \
-          parted util-linux xz-utils gcc make tar
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            debootstrap qemu-utils qemu-system-x86 \
+            parted util-linux xz-utils gcc make tar
 
-    - name: Make scripts executable
-      run: |
-        chmod +x scripts/*.sh || true
+      - name: Make scripts executable
+        run: |
+          chmod +x scripts/*.sh || true
 
-    - name: Build rootfs
-      run: |
-        bash scripts/build_rootfs.sh
+      - name: Build rootfs
+        run: |
+          bash scripts/build_rootfs.sh
 
-    - name: Create disk image
-      run: |
-        bash scripts/create_disk.sh rootfs.tar.gz disk.img
+      - name: Create disk image
+        run: |
+          bash scripts/create_disk.sh rootfs.tar.gz disk.img
 
-    - name: Build userland
-      run: |
-        bash scripts/build_userland.sh
+      - name: Build userland
+        run: |
+          bash scripts/build_userland.sh
 
-    - name: Upload artifacts (Actions)
-      uses: actions/upload-artifact@v4
-      with:
-        name: vm-artifacts
-        path: |
-          rootfs.tar.gz
-          disk.img
-          userland/libfakegpu.o
-          userland/testsubmit
+      - name: Upload artifacts (Actions)
+        uses: actions/upload-artifact@v4
+        with:
+          name: vm-artifacts
+          path: |
+            rootfs.tar.gz
+            disk.img
+            userland/libfakegpu.o
+            userland/testsubmit
 
-    - name: Commit artifacts into repo (branch: artifacts)
-      env:
-        GIT_AUTHOR_NAME: "github-actions[bot]"
-        GIT_AUTHOR_EMAIL: "41898282+github-actions[bot]@users.noreply.github.com"
-        TARGET_BRANCH: artifacts
-      run: |
-        # prepare a clean working copy
-        git config user.name "$GIT_AUTHOR_NAME"
-        git config user.email "$GIT_AUTHOR_EMAIL"
+      - name: Commit artifacts into repo (branch: artifacts)
+        env:
+          GIT_AUTHOR_NAME: "github-actions[bot]"
+          GIT_AUTHOR_EMAIL: "41898282+github-actions[bot]@users.noreply.github.com"
+          TARGET_BRANCH: artifacts
+        run: |
+          set -e
+          git config user.name "$GIT_AUTHOR_NAME"
+          git config user.email "$GIT_AUTHOR_EMAIL"
 
-        # create a temporary folder and copy artifacts there
-        mkdir -p build-artifacts
-        cp -v rootfs.tar.gz disk.img userland/libfakegpu.o userland/testsubmit build-artifacts/ || true
+          # prepare artifacts folder in workspace
+          mkdir -p build-artifacts
+          cp -v rootfs.tar.gz disk.img userland/libfakegpu.o userland/testsubmit build-artifacts/ || true
 
-        # create or switch to target branch
-        if git show-ref --quiet refs/heads/$TARGET_BRANCH; then
-          git checkout $TARGET_BRANCH
-        else
-          git checkout --orphan $TARGET_BRANCH
-          git rm -rf .
-          git clean -fdx || true
-        fi
+          # create or reset target branch
+          if git show-ref --quiet refs/heads/$TARGET_BRANCH; then
+            git checkout $TARGET_BRANCH
+            git rm -rf . || true
+          else
+            git checkout --orphan $TARGET_BRANCH
+            git rm -rf . || true
+          fi
 
-        # copy artifacts into branch
-        mkdir -p build-artifacts
-        cp -v ../rootfs.tar.gz ../disk.img ../userland/libfakegpu.o ../userland/testsubmit build-artifacts/ || true
-
-        # add, commit, and push
-        git add -A build-artifacts
-        git commit -m "CI: add build artifacts $(date -u +'%Y-%m-%dT%H:%M:%SZ')" || echo "Nothing to commit"
-        git push --set-upstream origin $TARGET_BRANCH --force
-      working-directory: ${{ github.workspace }}
+          # copy artifacts into branch and commit
+          mkdir -p build-artifacts
+          cp -v ../rootfs.tar.gz ../disk.img ../userland/libfakegpu.o ../userland/testsubmit build-artifacts/ || true || true
+          git add -A build-artifacts
+          git commit -m "CI: add build artifacts $(date -u +'%Y-%m-%dT%H:%M:%SZ')" || echo "Nothing to commit"
+          git push --set-upstream origin $TARGET_BRANCH --force
