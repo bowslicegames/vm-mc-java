@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Renderer Test</title></head>
+<body>
+<canvas id="gpu" width="800" height="600"></canvas>
+<script type="module">
+import { renderFromCommands } from './renderer.js';
+const canvas = document.getElementById('gpu');
+const cmds = [
+  { name: 'CMD_CLEAR', args: [0.1, 0.12, 0.15, 1.0] },
+  { name: 'CMD_DRAW_TRI' }
+];
+renderFromCommands(canvas, cmds).catch(console.error);
+</script>
+</body>
+</html>
