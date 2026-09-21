@@ -1,0 +1,6 @@
+FROM debian:stable-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    debootstrap qemu-user-static binfmt-support ca-certificates wget xz-utils \
+    && rm -rf /var/lib/apt/lists/*
+COPY build_rootfs.sh /build_rootfs.sh
+ENTRYPOINT ["/build_rootfs.sh"]
