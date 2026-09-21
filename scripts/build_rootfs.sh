@@ -20,5 +20,7 @@ sudo chroot $ROOT bash -c "
   apt-get clean
 "
 
-tar -czf rootfs.tar.gz -C $ROOT .
-echo "rootfs.tar.gz built"
+# FIX: safe tar command for GitHub Actions
+sudo tar --numeric-owner --xattrs --acls -czf rootfs.tar.gz -C $ROOT .
+
+echo "rootfs.tar.gz built successfully"
