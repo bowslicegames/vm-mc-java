@@ -1,0 +1,43 @@
+name: Build VM
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Install build tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          debootstrap qemu-utils qemu-system-x86 \
+          parted losetup xz-utils gcc make
+
+    - name: Build rootfs
+      run: |
+        bash scripts/build_rootfs.sh
+
+    - name: Create disk image
+      run: |
+        bash scripts/create_disk.sh rootfs.tar.gz disk.img
+
+    - name: Build userland
+      run: |
+        bash scripts/build_userland.sh
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: vm-artifacts
+        path: |
+          rootfs.tar.gz
+          disk.img
+          userland/libfakegpu.o
+          userland/testsubmit
